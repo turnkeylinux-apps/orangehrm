@@ -1,0 +1,23 @@
+NameVirtualHost *:80
+NameVirtualHost *:443
+
+<VirtualHost *:80>
+    UseCanonicalName Off
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/orangehrm/
+</VirtualHost>
+
+<VirtualHost *:443>
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/cert.pem
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/orangehrm/
+</VirtualHost>
+
+<Directory /var/www/orangehrm/>
+    Options +FollowSymLinks
+    AllowOverride All
+    order allow,deny
+    allow from all
+</Directory>
+
