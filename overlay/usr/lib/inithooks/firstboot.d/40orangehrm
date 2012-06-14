@@ -1,0 +1,8 @@
+#!/bin/bash -e
+# set orangehrm admin password
+
+. /etc/default/inithooks
+
+[ -e $INITHOOKS_CONF ] && . $INITHOOKS_CONF
+$INITHOOKS_PATH/bin/orangehrm.py --pass="$APP_PASS"
+
