@@ -82,6 +82,11 @@ cat >$WEBROOT/installer/.htaccess<<EOF
 deny from all
 EOF
 
+# secure sensitive files
+chmod 640 $WEBROOT/lib/confs/Conf.php
+chmod 640 $WEBROOT/symfony/config/databases.yml
+chmod 640 $WEBROOT/symfony/apps/orangehrm/config/settings.yml
+
 # stop services
 /etc/init.d/mysql stop
 /etc/init.d/apache2 stop
