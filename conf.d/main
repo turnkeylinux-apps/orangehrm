@@ -30,6 +30,7 @@ a2enmod rewrite
 
 # start services
 /etc/init.d/mysql start
+/etc/init.d/apache2 start
 
 # setup the database
 MYSQL_BATCH="mysql --user=root --password=$MYSQL_PASS --batch"
@@ -38,6 +39,50 @@ MYSQL_ADMIN="mysqladmin --user=root --password=$MYSQL_PASS"
 $MYSQL_ADMIN create $DB_NAME
 $MYSQL_BATCH --execute "grant all privileges on $DB_NAME.* to $DB_USER@localhost identified by '$DB_PASS'; flush privileges;"
 
+# curl based install
+URL_G="http://127.0.0.1/installer/installerUI.php"
+URL_P="http://127.0.0.1/install.php"
+CURL="curl -c /tmp/cookie -b /tmp/cookie"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=0&actionResponse=WELCOMEOK"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=1&actionResponse=LICENSEOK"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=2&actionResponse=&cMethod=existing&dbHostName=localhost&dbHostPortModifier=port&dbHostPort=3306&dbName=orangehrm_mysql&dbUserName=root&dbPassword=&dbOHRMUserName=orangehrm&dbOHRMPassword=&dbCreateMethod=new"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=2&actionResponse=DBINFO&cMethod=existing&dbHostName=localhost&dbHostPortModifier=port&dbHostPort=3306&dbName=$DB_NAME&dbOHRMUserName=$DB_USER&dbOHRMPassword=$DB_PASS&dbCreateMethod=existing"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=3&actionResponse=SYSCHECKOK"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=4&actionResponse=DEFUSERINFO&OHRMAdminUserName=$ADMIN_NAME&OHRMAdminPassword=$ADMIN_PASS&OHRMAdminPasswordConfirm=$ADMIN_PASS"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=5&actionResponse=CONFIRMED"
+while $CURL $URL_G |grep pending; do
+    sleep 2
+    $CURL $URL_P
+done
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=6&actionResponse=REGISTER"
+
+$CURL $URL_G
+$CURL $URL_P --data "txtScreen=7&actionResponse=NOREG&firstName=&userName=&company=&userEmail=&userTp=&userComments="
+
+rm -f /tmp/cookie
+
+# disable web based installer
+cat >$WEBROOT/installer/.htaccess<<EOF
+deny from all
+EOF
+
 # stop services
 /etc/init.d/mysql stop
+/etc/init.d/apache2 stop
 
