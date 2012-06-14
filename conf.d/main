@@ -87,6 +87,10 @@ chmod 640 $WEBROOT/lib/confs/Conf.php
 chmod 640 $WEBROOT/symfony/config/databases.yml
 chmod 640 $WEBROOT/symfony/apps/orangehrm/config/settings.yml
 
+# tweak footer on login page
+CONF=$WEBROOT/symfony/apps/orangehrm/modules/auth/templates/loginSuccess.php
+sed -i "s|footer.*|footer'); ?>\n<div id='turnkey-credit' style='text-align:center;padding-top:20px;'><a href='http://www.turnkeylinux.org/orangehrm'>OrangeHRM Appliance</a> - Powered by <a href='http://www.turnkeylinux.org'>TurnKey Linux</a></div>|" $CONF
+
 # stop services
 /etc/init.d/mysql stop
 /etc/init.d/apache2 stop
