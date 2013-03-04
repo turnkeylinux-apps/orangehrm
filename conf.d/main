@@ -11,10 +11,11 @@ SRC=/usr/local/src
 WEBROOT=/var/www/orangehrm
 
 # unpack and set required permissions
-tar -zxf $SRC/orangehrm-*.tar.gz -C $(dirname $WEBROOT)
+unzip $SRC/orangehrm-*.zip -d $(dirname $WEBROOT)
 rm $(dirname $WEBROOT)/orangehrm-quick-start-guide.html
 mv $(dirname $WEBROOT)/orangehrm-* $WEBROOT
-rm $SRC/orangehrm-*.tar.gz
+rm $SRC/orangehrm-*.zip
+
 chown -R root:root $WEBROOT
 chown -R www-data:www-data $WEBROOT/lib/logs
 chown -R www-data:www-data $WEBROOT/lib/confs
