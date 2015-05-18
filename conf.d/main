@@ -25,7 +25,7 @@ chown -R www-data:www-data $WEBROOT/symfony/config
 chown -R www-data:www-data $WEBROOT/symfony/apps/orangehrm/config
 
 # configure apache
-a2dissite default
+a2dissite 000-default
 a2ensite orangehrm
 a2enmod rewrite
 
