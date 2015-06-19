@@ -1,3 +1,16 @@
+turnkey-orangehrm-14.0 (1) turnkey; urgency=low
+
+  * Upgraded to latest version of OrangeHRM.
+
+  * Upstream source component versions:
+
+    orangehrm       3.3
+
+  * Note: Please refer to turnkey-core's changelog for changes common to all
+    appliances. Here we only describe changes specific to this appliance.
+
+ -- Stefan Davis <nafets.sivad@gmail.com>  Fri, 19 Jun 2015 06:45:15 +0000
+
 turnkey-orangehrm-13.0 (1) turnkey; urgency=low
 
   * PHPMyAdmin:
