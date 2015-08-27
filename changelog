@@ -4,12 +4,12 @@ turnkey-orangehrm-14.0 (1) turnkey; urgency=low
 
   * Upstream source component versions:
 
-    orangehrm       3.3
+    orangehrm       3.3.2
 
   * Note: Please refer to turnkey-core's changelog for changes common to all
     appliances. Here we only describe changes specific to this appliance.
 
- -- Stefan Davis <nafets.sivad@gmail.com>  Fri, 19 Jun 2015 06:45:15 +0000
+ -- Stefan Davis <nafets.sivad@gmail.com>  Mon, 10 Aug 2015 12:14:51 +1000
 
 turnkey-orangehrm-13.0 (1) turnkey; urgency=low
 

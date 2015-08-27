@@ -5,8 +5,7 @@ dl() {
     cd $2; curl -L -f -O $PROXY $1; cd -
 }
 
-VERSION="3.3/orangehrm-3.3.zip"
-URL="http://sourceforge.net/projects/orangehrm/files/stable/$VERSION"
+VERSION="3.3.2"
+URL="http://download.sourceforge.net/project/orangehrm/stable/${VERSION}/orangehrm-${VERSION}.zip"
 
 dl $URL /usr/local/src
-
