@@ -1,5 +1,5 @@
-OrangeHRM - Human Resources management
-======================================
+OrangeHRM - HRM (Human Resource management)
+===========================================
 
 `OrangeHRM`_ is an open source HRM (HRIS) solution for small and medium
 sized companies used by more than 1 million users worldwide.
