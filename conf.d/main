@@ -12,8 +12,10 @@ WEBROOT=/var/www/orangehrm
 
 # unpack and set required permissions
 unzip $SRC/orangehrm-*.zip -d $(dirname $WEBROOT)
-rm $(dirname $WEBROOT)/orangehrm-quick-start-guide.html
-mv $(dirname $WEBROOT)/orangehrm-* $WEBROOT
+pdirname=$(ls $(dirname $WEBROOT) | grep orangehrm-)
+rm $(dirname $WEBROOT)/orangehrm-*/orangehrm-quick-start-guide.html
+mv $(dirname $WEBROOT)/orangehrm-*/orangehrm-* $WEBROOT
+rm $(pdirname) -rf
 rm $SRC/orangehrm-*.zip
 
 chown -R root:root $WEBROOT
@@ -30,8 +32,11 @@ a2ensite orangehrm
 a2enmod rewrite
 
 # start services
-/etc/init.d/mysql start
-/etc/init.d/apache2 start
+service mysql start
+service apache2 start
+
+# patch 1 line in sql file that causes installation issues
+sed -i '/ohrm_oauth_user/ s/);/) ROW_FORMAT=dynamic;/' $WEBROOT/dbscript/dbscript-1.sql
 
 # setup the database
 MYSQL_BATCH="mysql --user=root --password=$MYSQL_PASS --batch"
@@ -52,10 +57,7 @@ $CURL $URL_G
 $CURL $URL_P --data "txtScreen=1&actionResponse=LICENSEOK"
 
 $CURL $URL_G
-$CURL $URL_P --data "txtScreen=2&actionResponse=&cMethod=existing&dbHostName=localhost&dbHostPortModifier=port&dbHostPort=3306&dbName=orangehrm_mysql&dbUserName=root&dbPassword=&dbOHRMUserName=orangehrm&dbOHRMPassword=&dbCreateMethod=new"
-
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=2&actionResponse=DBINFO&cMethod=existing&dbHostName=localhost&dbHostPortModifier=port&dbHostPort=3306&dbName=$DB_NAME&dbOHRMUserName=$DB_USER&dbOHRMPassword=$DB_PASS&dbCreateMethod=existing"
+$CURL $URL_P --data "txtScreen=2&actionResponse=DBINFO&cMethod=existing&dbHostName=127.0.0.1&dbHostPortModifier=port&dbHostPort=3306&dbName=$DB_NAME&dbOHRMUserName=$DB_USER&dbOHRMPassword=$DB_PASS&dbCreateMethod=existing"
 
 $CURL $URL_G
 $CURL $URL_P --data "txtScreen=3&actionResponse=SYSCHECKOK"
@@ -93,6 +95,6 @@ CONF=$WEBROOT/symfony/apps/orangehrm/modules/auth/templates/loginSuccess.php
 sed -i "s|footer.*|footer'); ?>\n<div id='turnkey-credit' style='text-align:center;padding-top:20px;'><a href='https://www.turnkeylinux.org/orangehrm'>OrangeHRM Appliance</a> - Powered by <a href='https://www.turnkeylinux.org'>TurnKey Linux</a></div>|" $CONF
 
 # stop services
-/etc/init.d/mysql stop
-/etc/init.d/apache2 stop
+service mysql stop
+service apache2 stop
 
