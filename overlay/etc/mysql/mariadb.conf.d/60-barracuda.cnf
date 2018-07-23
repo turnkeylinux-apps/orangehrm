@@ -1,0 +1,4 @@
+[mysqld]
+innodb_file_per_table = 1
+innodb_large_prefix = on
+innodb_file_format = barracuda
