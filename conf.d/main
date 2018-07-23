@@ -94,6 +94,12 @@ chmod 640 $WEBROOT/symfony/apps/orangehrm/config/settings.yml
 CONF=$WEBROOT/symfony/apps/orangehrm/modules/auth/templates/loginSuccess.php
 sed -i "s|footer.*|footer'); ?>\n<div id='turnkey-credit' style='text-align:center;padding-top:20px;'><a href='https://www.turnkeylinux.org/orangehrm'>OrangeHRM Appliance</a> - Powered by <a href='https://www.turnkeylinux.org'>TurnKey Linux</a></div>|" $CONF
 
+# patch database to avoid potential row issue later
+TABLES=$($MYSQL_BATCH --silent $DB_NAME --execute 'SHOW TABLES')
+for TABLE in $TABLES; do
+    $MYSQL_BATCH $DB_NAME --execute "ALTER TABLE $TABLE ROW_FORMAT=dynamic;"
+done
+
 # stop services
 service mysql stop
 service apache2 stop
