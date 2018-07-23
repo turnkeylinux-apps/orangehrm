@@ -1,3 +1,24 @@
+turnkey-orangehrm-15.0 (1) turnkey; urgency=low
+
+  * Install Adminer directly from stretch/main repo
+
+  * Provide "adminer" root-like user for Adminer MySQL access
+
+  * Replace MySQL with MariaDB (drop-in MySQL replacement)
+
+  * Updated version of mysqltuner script
+
+  * Includes PHP7.0 (installed from Debian repos)
+
+  * Updated PHP default settings
+
+  * Remove phpsh (no longer maintained)
+
+  * Note: Please refer to turnkey-core's changelog for changes common to all
+    appliances. Here we only describe changes specdific to this appliance.
+
+ -- Vlad Kuzmenko <vlad.work.here@gmail.com>  Thu, 19 Apr 2018 19:09:42 +0200
+
 turnkey-orangehrm-14.2 (1) turnkey; urgency=low
 
   * Upgraded to latest version of OrangeHRM.

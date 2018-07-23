@@ -17,6 +17,8 @@ rm $(dirname $WEBROOT)/orangehrm-*/orangehrm-quick-start-guide.html
 mv $(dirname $WEBROOT)/orangehrm-*/orangehrm-* $WEBROOT
 rm $(pdirname) -rf
 rm $SRC/orangehrm-*.zip
+sed -i "s|username_pk PRIMARY KEY (username))|username_pk PRIMARY KEY (username)) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC|" $WEBROOT/dbscript/dbscript-1.sql
+
 
 chown -R root:root $WEBROOT
 chown -R www-data:www-data $WEBROOT/lib/logs
@@ -30,6 +32,20 @@ chown -R www-data:www-data $WEBROOT/symfony/apps/orangehrm/config
 a2dissite 000-default
 a2ensite orangehrm
 a2enmod rewrite
+
+cat >> /etc/mysql/my.cnf <<EOF
+[client]
+default-character-set = utf8mb4
+[mysqld]
+innodb_file_format = Barracuda
+innodb_file_per_table = 1
+innodb_large_prefix
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+skip-character-set-client-handshake
+[mysql]
+default-character-set = utf8mb4
+EOF
 
 # start services
 service mysql start
@@ -68,8 +84,8 @@ $CURL $URL_P --data "txtScreen=4&actionResponse=DEFUSERINFO&OHRMAdminUserName=$A
 $CURL $URL_G
 $CURL $URL_P --data "txtScreen=5&actionResponse=CONFIRMED"
 while $CURL $URL_G |grep pending; do
-    sleep 2
-    $CURL $URL_P
+   sleep 2
+   $CURL $URL_P
 done
 
 $CURL $URL_G
@@ -86,13 +102,13 @@ deny from all
 EOF
 
 # secure sensitive files
-chmod 640 $WEBROOT/lib/confs/Conf.php
-chmod 640 $WEBROOT/symfony/config/databases.yml
-chmod 640 $WEBROOT/symfony/apps/orangehrm/config/settings.yml
+#chmod 640 $WEBROOT/lib/confs/Conf.php
+#chmod 640 $WEBROOT/symfony/config/databases.yml
+#chmod 640 $WEBROOT/symfony/apps/orangehrm/config/settings.yml
 
 # tweak footer on login page
-CONF=$WEBROOT/symfony/apps/orangehrm/modules/auth/templates/loginSuccess.php
-sed -i "s|footer.*|footer'); ?>\n<div id='turnkey-credit' style='text-align:center;padding-top:20px;'><a href='https://www.turnkeylinux.org/orangehrm'>OrangeHRM Appliance</a> - Powered by <a href='https://www.turnkeylinux.org'>TurnKey Linux</a></div>|" $CONF
+#CONF=$WEBROOT/symfony/apps/orangehrm/modules/auth/templates/loginSuccess.php
+#sed -i "s|footer.*|footer'); ?>\n<div id='turnkey-credit' style='text-align:center;padding-top:20px;'><a href='https://www.turnkeylinux.org/orangehrm'>OrangeHRM Appliance</a> - Powered by <a href='https://www.turnkeylinux.org'>TurnKey Linux</a></div>|" $CONF
 
 # patch database to avoid potential row issue later
 TABLES=$($MYSQL_BATCH --silent $DB_NAME --execute 'SHOW TABLES')
