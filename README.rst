@@ -14,6 +14,10 @@ and on top of that:
    
    - Installed from upstream source code to /var/www/orangehrm
 
+   **Security note**: Updates to OrangeHRM may require supervision so
+   they **ARE NOT** configured to install automatically. Upgrades to
+   OrangeHRM should be possible from within the web UI.
+
 - SSL support out of the box.
 - `Adminer`_ administration frontend for MySQL (listening on port
   12322 - uses SSL).
