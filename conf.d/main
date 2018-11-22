@@ -12,10 +12,8 @@ WEBROOT=/var/www/orangehrm
 
 # unpack and set required permissions
 unzip $SRC/orangehrm-*.zip -d $(dirname $WEBROOT)
-pdirname=$(ls $(dirname $WEBROOT) | grep orangehrm-)
-rm $(dirname $WEBROOT)/orangehrm-*/orangehrm-quick-start-guide.html
-mv $(dirname $WEBROOT)/orangehrm-*/orangehrm-* $WEBROOT
-rm $(pdirname) -rf
+rm $(dirname $WEBROOT)/orangehrm-quick-start-guide.html
+mv $(dirname $WEBROOT)/orangehrm-* $WEBROOT
 rm $SRC/orangehrm-*.zip
 sed -i "s|username_pk PRIMARY KEY (username))|username_pk PRIMARY KEY (username)) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC|" $WEBROOT/dbscript/dbscript-1.sql
 
