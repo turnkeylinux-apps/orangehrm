@@ -38,7 +38,8 @@ def main():
         d = Dialog('TurnKey Linux - First boot configuration')
         password = d.get_password(
             "OrangeHRM Password",
-            "Enter new password for the OrangeHRM 'admin' account.")
+            "Enter new password for the OrangeHRM 'admin' account.",
+            min_complexity=4)
 
     hash = hashlib.md5(password.encode('utf8')).hexdigest()
 
