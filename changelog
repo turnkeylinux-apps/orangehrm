@@ -1,3 +1,9 @@
+turnkey-orangehrm-18.0 (1) turnkey; urgency=low
+
+  * Install latest upstream OrangeHRM (5.5)
+
+ -- Stefan Davis <stefan@turnkeylinux.org>  Tue, 29 Aug 2023 21:24:28 +0000
+
 turnkey-orangehrm-17.1 (1) turnkey; urgency=low
 
   * Updated all Debian packages to latest.
