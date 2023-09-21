@@ -6,6 +6,6 @@ dl() {
 }
 
 VERSION="5.5"
-URL="http://download.sourceforge.net/project/orangehrm/stable/${VERSION}/orangehrm-${VERSION}.zip"
+URL="https://download.sourceforge.net/project/orangehrm/stable/${VERSION}/orangehrm-${VERSION}.zip"
 
 dl $URL /usr/local/src
