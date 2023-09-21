@@ -1,11 +1,11 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 DB_NAME=orangehrm
 DB_USER=orangehrm
 DB_PASS=$(mcookie)
 
 ADMIN_NAME=admin
-ADMIN_PASS=turnkey
+ADMIN_PASS=turnkey12!
 
 SRC=/usr/local/src
 WEBROOT=/var/www/orangehrm
@@ -15,16 +15,10 @@ unzip $SRC/orangehrm-*.zip -d $(dirname $WEBROOT)
 rm $(dirname $WEBROOT)/orangehrm-quick-start-guide.html
 mv $(dirname $WEBROOT)/orangehrm-* $WEBROOT
 rm $SRC/orangehrm-*.zip
-sed -i "s|username_pk PRIMARY KEY (username))|username_pk PRIMARY KEY (username)) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC|" $WEBROOT/dbscript/dbscript-1.sql
 
 
 chown -R root:root $WEBROOT
-chown -R www-data:www-data $WEBROOT/lib/logs
 chown -R www-data:www-data $WEBROOT/lib/confs
-chown -R www-data:www-data $WEBROOT/symfony/log
-chown -R www-data:www-data $WEBROOT/symfony/cache
-chown -R www-data:www-data $WEBROOT/symfony/config
-chown -R www-data:www-data $WEBROOT/symfony/apps/orangehrm/config
 
 # configure apache
 a2dissite 000-default
@@ -35,9 +29,6 @@ a2enmod rewrite
 service mysql start
 service apache2 start
 
-# patch 1 line in sql file that causes installation issues
-sed -i '/ohrm_oauth_user/ s/);/) ROW_FORMAT=dynamic;/' $WEBROOT/dbscript/dbscript-1.sql
-
 # setup the database
 MYSQL_BATCH="mysql --user=root --password=$MYSQL_PASS --batch"
 MYSQL_ADMIN="mysqladmin --user=root --password=$MYSQL_PASS"
@@ -45,54 +36,83 @@ MYSQL_ADMIN="mysqladmin --user=root --password=$MYSQL_PASS"
 $MYSQL_ADMIN create $DB_NAME
 $MYSQL_BATCH --execute "grant all privileges on $DB_NAME.* to $DB_USER@localhost identified by '$DB_PASS'; flush privileges;"
 
-# curl based install
-URL_G="http://127.0.0.1/installer/installerUI.php"
-URL_P="http://127.0.0.1/install.php"
-CURL="curl -c /tmp/cookie -b /tmp/cookie"
+CONF=/var/www/orangehrm/installer/cli_install_config.yaml
 
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=0&actionResponse=WELCOMEOK"
+sed -i "/databaseName/ s/:.*/: $DB_NAME/" $CONF
+sed -i "/privilidgedDatabaseUser/ s/:.*/: $DB_USER/" $CONF
+sed -i "/privilidgedDatabasePassword/ s/:.*/: $DB_PASS/" $CONF
+sed -i "/isExistingDatabase/ s/:.*/: y/" $CONF
 
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=1&actionResponse=LICENSEOK"
+expect << EOF
+spawn php /var/www/orangehrm/installer/console install:on-existing-database
 
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=2&actionResponse=DBINFO&cMethod=existing&dbHostName=127.0.0.1&dbHostPortModifier=port&dbHostPort=3306&dbName=$DB_NAME&dbOHRMUserName=$DB_USER&dbOHRMPassword=$DB_PASS&dbCreateMethod=existing"
-
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=3&actionResponse=SYSCHECKOK"
-
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=4&actionResponse=DEFUSERINFO&OHRMAdminUserName=$ADMIN_NAME&OHRMAdminPassword=$ADMIN_PASS&OHRMAdminPasswordConfirm=$ADMIN_PASS"
-
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=5&actionResponse=CONFIRMED"
-while $CURL $URL_G |grep pending; do
-   sleep 2
-   $CURL $URL_P
-done
-
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=6&actionResponse=REGISTER"
-
-$CURL $URL_G
-$CURL $URL_P --data "txtScreen=7&actionResponse=NOREG&firstName=&userName=&company=&userEmail=&userTp=&userComments="
-
-rm -f /tmp/cookie
+expect "*License Agreement*\r"
+expect " >"
+send "yes\r"
+expect "*Database Host Name*\r"
+expect " >"
+send "localhost\r"
+expect "*Database Host Port*\r"
+expect " >"
+send "3306\r"
+expect "*Database Name*\r"
+expect " >"
+send "orangehrm\r"
+expect "*OrangeHRM Database Username*\r"
+expect " >"
+send "orangehrm\r"
+expect "*OrangeHRM Database User Password*\r"
+expect " >"
+send "$DB_PASS\r"
+expect " >"
+send "\r"
+expect "*Organization Name*\r"
+expect " >"
+send "TurnkeyLinux\r"
+expect "*Country*\r"
+expect " >"
+send "united states\r"
+expect "*Language*\r"
+expect " >"
+send "en_US\r"
+expect "*Timezone Group*\r"
+expect " >"
+send "UTC\r"
+expect " >"
+send "UTC\r"
+expect "*First Name*\r"
+expect " >"
+send "Admin\r"
+expect "*Last Name*\r"
+expect " >"
+send "istrator\r"
+expect "*Email*\r"
+expect " >"
+send "admin@example.com\r"
+expect "*Contact Number*\r"
+expect " >"
+send "\r"
+expect "*Admin Username*\r"
+expect " >"
+send "$ADMIN_NAME\r"
+expect "*Password*\r"
+expect " >"
+send "$ADMIN_PASS\r"
+expect "*Confirm Password*\r"
+expect " >"
+send "$ADMIN_PASS\r"
+expect " >"
+send "no\r"
+expect " >"
+send "yes\r"
+set timeout 480
+expect eof
+EOF
 
 # disable web based installer
 cat >$WEBROOT/installer/.htaccess<<EOF
 deny from all
 EOF
-
-# secure sensitive files
-#chmod 640 $WEBROOT/lib/confs/Conf.php
-#chmod 640 $WEBROOT/symfony/config/databases.yml
-#chmod 640 $WEBROOT/symfony/apps/orangehrm/config/settings.yml
-
-# tweak footer on login page
-#CONF=$WEBROOT/symfony/apps/orangehrm/modules/auth/templates/loginSuccess.php
-#sed -i "s|footer.*|footer'); ?>\n<div id='turnkey-credit' style='text-align:center;padding-top:20px;'><a href='https://www.turnkeylinux.org/orangehrm'>OrangeHRM Appliance</a> - Powered by <a href='https://www.turnkeylinux.org'>TurnKey Linux</a></div>|" $CONF
 
 # patch database to avoid potential row issue later
 TABLES=$($MYSQL_BATCH --silent $DB_NAME --execute 'SHOW TABLES')

@@ -1,8 +1,12 @@
 #include <turnkey/base>
 #include <turnkey/lamp>
 
+expect
 php-gd
 php-cli
 php-curl
 php-xml
 php-mbstring
+php-zip
+php-ldap
+jq
