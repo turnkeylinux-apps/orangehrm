@@ -32,8 +32,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-systemctl --quiet is-active apache2.service mariadb.service postfix.service multi-user.target
-systemctl --quiet is-enabled apache2.service mariadb.service postfix.service
+systemctl --quiet is-active apache2.service mariadb.service postfix.service cron.service multi-user.target
+systemctl --quiet is-enabled apache2.service mariadb.service postfix.service cron.service
 apache2ctl -t
 apache2ctl -M 2>/dev/null | grep -F ' rewrite_module ' >/dev/null
 
@@ -51,6 +51,22 @@ grep -Fxq 'sha256=f6e640f8b59e8d09f15edcd24ac3d42bb52dcc4839a7d83f964dd798bc793f
 test -x /usr/local/sbin/orangehrm-update
 update_candidate=$(orangehrm-update --check)
 [[ $update_candidate =~ ^version=[0-9]+\.[0-9]+(\.[0-9]+)?\ sha256=[0-9a-f]{64}$ ]]
+grep -Fxq '*/5 * * * * www-data cd /var/www/orangehrm && php bin/console orangehrm:run-schedule >>/var/log/orangehrm-scheduler.log 2>&1' \
+    /etc/cron.d/orangehrm
+mysql --user=root --password="$db_password" orangehrm --execute="
+    INSERT INTO ohrm_workspace_notification_log
+        (registration_id, event_type, event_date, status, recipient_count, error_message, created_at)
+    VALUES (NULL, 'acceptance', '2000-01-01', 'SUCCESS', 0, NULL, '2000-01-01 00:00:00');"
+runuser -u www-data -- php /var/www/orangehrm/bin/console \
+    orangehrm:purge-workspace-notification-logs --days=30 -vvv >"$page"
+grep -q 'Workspace notification log purge' "$page"
+test "$(mysql --user=root --password="$db_password" --batch --skip-column-names orangehrm \
+    --execute="SELECT COUNT(*) FROM ohrm_workspace_notification_log WHERE event_type='acceptance';")" = 0
+runuser -u www-data -- php /var/www/orangehrm/bin/console \
+    orangehrm:run-schedule -vvv >"$page"
+grep -q 'Scheduler success' "$page"
+
+bash /run/tkl-v19-tests/tests/orangehrm-upgrade-v19.sh
 
 curl --insecure --fail --silent --show-error --location "$login" \
     -c "$cookie" >"$page"
@@ -133,9 +149,9 @@ grep -Rqs '^Suites: trixie' /etc/apt/sources.list.d
 cat >"$result" <<EOF
 package_source=Debian 13 Trixie APT repositories for Apache, PHP, MariaDB, Adminer and Postfix; verified official OrangeHRM GitHub release asset
 installed_version=orangehrm $orangehrm_version; php $php_version; apache2 $apache_version; mariadb-server $mariadb_version
-runtime_checks=normal init; Apache and MariaDB supervision; OrangeHRM HTTPS login with firstboot password; dashboard session; employee create, read and delete through the authenticated API with MariaDB persistence; blocked web installer; Adminer credential login; Webmin HTTPS; local Postfix listener
+runtime_checks=normal init; Apache, MariaDB and cron supervision; OrangeHRM HTTPS login with firstboot password; dashboard session; employee create, read and delete through the authenticated API with MariaDB persistence; five-minute OrangeHRM scheduler and scheduled log purge; blocked web installer; Adminer credential login; Webmin HTTPS; local Postfix listener
 updater_command=orangehrm-update --check; orangehrm-update VERSION for a supervised backup, verified release migration and application swap; apt-get update and apt-cache policy for Debian packages
-updater_result=official stable release metadata returned $update_candidate; signed Debian metadata refreshed with installed packages unchanged
+updater_result=verified OrangeHRM 5.8.1 fixture upgraded to 5.9 with employee data preserved and post-upgrade login and CRUD smoke passing; official stable release metadata returned $update_candidate; signed Debian metadata refreshed with installed packages unchanged
 updater_channel=official stable OrangeHRM GitHub releases with GitHub-published SHA-256 asset digests; Debian and TurnKey Trixie APT repositories
-integrity_evidence=installed release marker records the pinned GitHub URL and SHA-256; updater requires the official release asset digest; APT accepted signed repository metadata; no Bookworm source remained
+integrity_evidence=official 5.8.1 fixture and 5.9 target matched GitHub-published SHA-256 digests; installed release marker records the 5.9 URL and digest after HTTP health; updater requires the official release asset digest; APT accepted signed repository metadata; no Bookworm source remained
 EOF

@@ -13,6 +13,7 @@ and on top of that:
 - OrangeHRM configurations:
    
    - Installed from upstream source code to /var/www/orangehrm
+   - Runs OrangeHRM scheduled tasks every five minutes
 
    **Security note**: OrangeHRM updates require supervision and are not
    installed automatically. Run ``orangehrm-update --check`` to inspect the

@@ -59,7 +59,7 @@ transaction=$(mktemp -d /var/lib/orangehrm-update/transaction.XXXXXX)
 archive=$transaction/orangehrm.zip
 curl --fail --show-error --location "$asset_url" --output "$archive"
 echo "$digest  $archive" | sha256sum -c -
-unzip -q "$archive" -d "$transaction/unpacked"
+(umask 022; unzip -q "$archive" -d "$transaction/unpacked")
 candidate=$transaction/unpacked/orangehrm-$target
 [[ -f $candidate/installer/console && -f $candidate/src/lib/config/Config.php ]] || {
     echo "release archive has an unexpected layout" >&2
@@ -141,13 +141,13 @@ EOF
 mv "$webroot" "$backup/application"
 swapped=true
 mv "$candidate" "$webroot"
+systemctl start apache2.service
+curl --fail --silent --show-error --location http://127.0.0.1/ >/dev/null
 cat >"/usr/share/orangehrm/release" <<EOF
 version=$target
 url=$asset_url
 sha256=$digest
 EOF
-systemctl start apache2.service
-curl --fail --silent --show-error --location http://127.0.0.1/ >/dev/null
 trap - ERR
 rm -rf -- "$transaction"
 echo "OrangeHRM updated from $current to $target; backup retained at $backup"
