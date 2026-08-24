@@ -72,6 +72,9 @@ grep -q '<oxd-layout' "$page"
 mysql --user=root --password="$db_password" --batch --skip-column-names \
     --execute="SELECT user_password FROM orangehrm.ohrm_user WHERE user_name='admin'" |
     grep -q '^\$2y\$'
+mysql --user=root --password="$db_password" --batch --skip-column-names \
+    --execute="SELECT value FROM orangehrm.ohrm_config WHERE name='auth.password_policy.enforce_password_strength'" |
+    grep -qx 'off'
 
 curl --insecure --fail --silent --show-error -b "$cookie" \
     -H 'Content-Type: application/json' \
