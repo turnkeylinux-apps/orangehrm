@@ -1,9 +1,9 @@
 #include <turnkey/base>
 #include <turnkey/lamp>
 
-expect
 php-gd
 php-cli
+php-mysql
 php-curl
 php-xml
 php-mbstring

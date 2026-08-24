@@ -1,3 +1,13 @@
+turnkey-orangehrm-19.0 (1) turnkey; urgency=low
+
+  * Install the verified official OrangeHRM 5.9 release on Debian 13 Trixie.
+
+  * Add a supervised updater for verified official OrangeHRM releases.
+
+  * Use PHP 8.4 and MariaDB 11.8 from Debian Trixie repositories.
+
+ -- TurnKey Linux Developers <admin@turnkeylinux.org>  Mon, 24 Aug 2026 00:00:00 +0000
+
 turnkey-orangehrm-18.0 (1) turnkey; urgency=low
 
   * Install latest upstream OrangeHRM (5.5)
@@ -264,4 +274,3 @@ turnkey-orangehrm-12.0 (1) turnkey; urgency=low
     appliances. Here we only describe changes specific to this appliance.
 
  -- Alon Swartz <alon@turnkeylinux.org>  Wed, 01 Aug 2012 08:00:00 +0200
-
