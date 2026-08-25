@@ -129,11 +129,11 @@ if [[ -f $webroot/lib/confs/cryptokeys/key.ohrm ]]; then
 fi
 
 chown -R root:root "$candidate"
-chown -R www-data:www-data "$candidate/lib/confs" "$candidate/src/cache" "$candidate/src/log"
 systemctl stop apache2.service
 php "$candidate/installer/console" upgrade:run --no-interaction \
     --dbHost="$db_host" --dbPort="$db_port" --dbName="$db_name" \
     --dbUser="$db_user" --dbUserPassword="$db_pass" --currentVersion="$current"
+chown -R www-data:www-data "$candidate/lib/confs" "$candidate/src/cache" "$candidate/src/log"
 cat >"$candidate/installer/.htaccess" <<EOF
 Require all denied
 EOF
