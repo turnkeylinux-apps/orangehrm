@@ -142,7 +142,8 @@ mv "$webroot" "$backup/application"
 swapped=true
 mv "$candidate" "$webroot"
 systemctl start apache2.service
-curl --fail --silent --show-error --location http://127.0.0.1/ >/dev/null
+curl --fail --silent --show-error --location \
+    http://127.0.0.1/web/index.php/auth/login >/dev/null
 cat >"/usr/share/orangehrm/release" <<EOF
 version=$target
 url=$asset_url
