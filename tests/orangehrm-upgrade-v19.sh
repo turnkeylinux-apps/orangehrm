@@ -141,7 +141,7 @@ grep -Fxq 'sha256=f6e640f8b59e8d09f15edcd24ac3d42bb52dcc4839a7d83f964dd798bc793f
 login
 read_employee
 delete_employee
-create_employee TKLUPGRADEPOST
+create_employee TKLPOST59
 read_employee
 delete_employee
 trap - EXIT
