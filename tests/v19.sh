@@ -13,6 +13,8 @@ headers=/tmp/tkl-orangehrm-headers.$$
 json=/tmp/tkl-orangehrm-json.$$
 policy=/tmp/tkl-orangehrm-policy.$$
 adminer_cookie=/tmp/tkl-orangehrm-adminer-cookie.$$
+scheduler_config=/var/www/orangehrm/src/plugins/orangehrmWorkspaceNotificationsPlugin/config/WorkspaceNotificationsPluginConfiguration.php
+scheduler_config_backup=/tmp/tkl-orangehrm-scheduler-config.$$
 
 report_error() {
     printf 'test_failure line=%s status=%s command=%q\n' "$1" "$2" "$3" >&2
@@ -22,13 +24,17 @@ trap 'report_error "$LINENO" "$?" "$BASH_COMMAND"' ERR
 
 employee=
 cleanup() {
+    if [[ -e $scheduler_config_backup ]]; then
+        cp -a -- "$scheduler_config_backup" "$scheduler_config"
+    fi
     if [[ -n $employee ]]; then
         curl --insecure --silent --show-error -b "$cookie" \
             -H 'Content-Type: application/json' -X DELETE \
             --data "{\"ids\":[$employee]}" \
             "$base/web/index.php/api/v2/pim/employees" >/dev/null || true
     fi
-    rm -f -- "$cookie" "$page" "$headers" "$json" "$policy" "$adminer_cookie"
+    rm -f -- "$cookie" "$page" "$headers" "$json" "$policy" "$adminer_cookie" \
+        "$scheduler_config_backup"
 }
 trap cleanup EXIT
 
@@ -57,8 +63,13 @@ mysql --user=root --password="$db_password" orangehrm --execute="
     INSERT INTO ohrm_workspace_notification_log
         (registration_id, event_type, event_date, status, recipient_count, error_message, created_at)
     VALUES (NULL, 'acceptance', '2000-01-01', 'SUCCESS', 0, NULL, '2000-01-01 00:00:00');"
+cp -a -- "$scheduler_config" "$scheduler_config_backup"
+sed -i "s/cron('0 2 \* \* \*')/cron('* * * * *')/" "$scheduler_config"
+grep -Fq "cron('* * * * *')" "$scheduler_config"
 runuser -u www-data -- sh -c \
     'cd /var/www/orangehrm && php bin/console orangehrm:run-schedule >>/var/www/orangehrm/src/log/orangehrm-scheduler.log 2>&1'
+cp -a -- "$scheduler_config_backup" "$scheduler_config"
+rm -f -- "$scheduler_config_backup"
 test "$(mysql --user=root --password="$db_password" --batch --skip-column-names orangehrm \
     --execute="SELECT COUNT(*) FROM ohrm_workspace_notification_log WHERE event_type='acceptance';")" = 0
 
