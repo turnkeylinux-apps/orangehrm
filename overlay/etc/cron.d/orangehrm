@@ -1,1 +1,1 @@
-*/5 * * * * www-data cd /var/www/orangehrm && php bin/console orangehrm:run-schedule >>/var/log/orangehrm-scheduler.log 2>&1
+*/5 * * * * www-data cd /var/www/orangehrm && php bin/console orangehrm:run-schedule >>/var/www/orangehrm/src/log/orangehrm-scheduler.log 2>&1

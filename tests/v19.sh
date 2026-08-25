@@ -51,20 +51,18 @@ grep -Fxq 'sha256=f6e640f8b59e8d09f15edcd24ac3d42bb52dcc4839a7d83f964dd798bc793f
 test -x /usr/local/sbin/orangehrm-update
 update_candidate=$(orangehrm-update --check)
 [[ $update_candidate =~ ^version=[0-9]+\.[0-9]+(\.[0-9]+)?\ sha256=[0-9a-f]{64}$ ]]
-grep -Fxq '*/5 * * * * www-data cd /var/www/orangehrm && php bin/console orangehrm:run-schedule >>/var/log/orangehrm-scheduler.log 2>&1' \
+grep -Fxq '*/5 * * * * www-data cd /var/www/orangehrm && php bin/console orangehrm:run-schedule >>/var/www/orangehrm/src/log/orangehrm-scheduler.log 2>&1' \
     /etc/cron.d/orangehrm
 mysql --user=root --password="$db_password" orangehrm --execute="
     INSERT INTO ohrm_workspace_notification_log
         (registration_id, event_type, event_date, status, recipient_count, error_message, created_at)
     VALUES (NULL, 'acceptance', '2000-01-01', 'SUCCESS', 0, NULL, '2000-01-01 00:00:00');"
-runuser -u www-data -- php /var/www/orangehrm/bin/console \
-    orangehrm:purge-workspace-notification-logs --days=30 -vvv >"$page"
-grep -q 'Workspace notification log purge' "$page"
+scheduler_log=/var/www/orangehrm/src/log/orangehrm-scheduler.log
+runuser -u www-data -- sh -c \
+    'cd /var/www/orangehrm && php bin/console orangehrm:run-schedule >>/var/www/orangehrm/src/log/orangehrm-scheduler.log 2>&1'
+grep -q 'Scheduler success' "$scheduler_log"
 test "$(mysql --user=root --password="$db_password" --batch --skip-column-names orangehrm \
     --execute="SELECT COUNT(*) FROM ohrm_workspace_notification_log WHERE event_type='acceptance';")" = 0
-runuser -u www-data -- php /var/www/orangehrm/bin/console \
-    orangehrm:run-schedule -vvv >"$page"
-grep -q 'Scheduler success' "$page"
 
 bash /run/tkl-v19-tests/tests/orangehrm-upgrade-v19.sh
 
