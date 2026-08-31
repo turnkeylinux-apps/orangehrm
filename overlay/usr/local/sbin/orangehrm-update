@@ -1,0 +1,154 @@
+#!/bin/bash
+set -Eeuo pipefail
+umask 077
+
+webroot=/var/www/orangehrm
+api=https://api.github.com/repos/orangehrm/orangehrm/releases
+
+usage() {
+    echo "Usage: orangehrm-update --check | VERSION" >&2
+    exit 2
+}
+
+release_metadata() {
+    local endpoint=$1
+    curl --fail --silent --show-error --location "$endpoint"
+}
+
+if [[ ${1:-} == --check && $# == 1 ]]; then
+    metadata=$(release_metadata "$api/latest")
+    jq -er '
+        select(.draft == false and .prerelease == false)
+        | .tag_name as $tag
+        | .assets[]
+        | select(.name == ("orangehrm-" + ($tag | ltrimstr("v")) + ".zip"))
+        | select(.digest | startswith("sha256:"))
+        | "version=" + ($tag | ltrimstr("v")) + " sha256=" + (.digest | ltrimstr("sha256:"))
+    ' <<<"$metadata"
+    exit 0
+fi
+
+[[ $# == 1 && $1 =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || usage
+[[ $(id -u) == 0 ]] || { echo "orangehrm-update must run as root" >&2; exit 1; }
+
+target=$1
+current=$(php -r "require '$webroot/src/lib/config/Config.php'; echo \\OrangeHRM\\Config\\Config::PRODUCT_VERSION;")
+dpkg --compare-versions "$target" gt "$current" || {
+    echo "target $target must be newer than installed OrangeHRM $current" >&2
+    exit 1
+}
+
+metadata=$(release_metadata "$api/tags/v$target")
+read -r asset_url digest < <(
+    jq -er --arg name "orangehrm-$target.zip" '
+        select(.draft == false and .prerelease == false)
+        | .assets[]
+        | select(.name == $name)
+        | select(.digest | startswith("sha256:"))
+        | [.browser_download_url, (.digest | ltrimstr("sha256:"))]
+        | @tsv
+    ' <<<"$metadata"
+)
+[[ -n $asset_url && $digest =~ ^[0-9a-f]{64}$ ]] || {
+    echo "official release metadata did not provide a SHA-256 asset digest" >&2
+    exit 1
+}
+
+install -d -m 0700 /var/lib/orangehrm-update /var/backups/orangehrm
+transaction=$(mktemp -d /var/lib/orangehrm-update/transaction.XXXXXX)
+archive=$transaction/orangehrm.zip
+curl --fail --show-error --location "$asset_url" --output "$archive"
+echo "$digest  $archive" | sha256sum -c -
+(umask 022; unzip -q "$archive" -d "$transaction/unpacked")
+candidate=$transaction/unpacked/orangehrm-$target
+[[ -f $candidate/installer/console && -f $candidate/src/lib/config/Config.php ]] || {
+    echo "release archive has an unexpected layout" >&2
+    exit 1
+}
+candidate_version=$(php -r "require '$candidate/src/lib/config/Config.php'; echo \\OrangeHRM\\Config\\Config::PRODUCT_VERSION;")
+[[ $candidate_version == "$target" ]] || {
+    echo "release archive reports version $candidate_version, expected $target" >&2
+    exit 1
+}
+grep -Fq "'$current' =>" "$candidate/installer/Util/AppSetupUtility.php" || {
+    echo "OrangeHRM $target does not advertise a migration from $current" >&2
+    exit 1
+}
+
+mapfile -t database < <(php -r "
+    require '$webroot/lib/confs/Conf.php';
+    \$conf = new Conf();
+    foreach (['getDbHost', 'getDbPort', 'getDbName', 'getDbUser', 'getDbPass'] as \$method) {
+        echo \$conf->{\$method}(), PHP_EOL;
+    }
+")
+[[ ${#database[@]} == 5 ]] || { echo "could not read OrangeHRM database configuration" >&2; exit 1; }
+db_host=${database[0]}
+db_port=${database[1]}
+db_name=${database[2]}
+db_user=${database[3]}
+db_pass=${database[4]}
+
+client_config=$transaction/mariadb.cnf
+cat >"$client_config" <<EOF
+[client]
+host=$db_host
+port=$db_port
+user=$db_user
+password=$db_pass
+EOF
+
+backup=/var/backups/orangehrm/$(date -u +%Y%m%dT%H%M%SZ)-$current-to-$target
+install -d -m 0700 "$backup"
+mariadb-dump --defaults-extra-file="$client_config" --single-transaction \
+    --routines --triggers "$db_name" >"$backup/database.sql"
+
+rolled_back=false
+swapped=false
+rollback() {
+    local status=$?
+    if [[ $rolled_back == false ]]; then
+        if [[ $swapped == true ]]; then
+            if [[ -e $webroot ]]; then
+                mv "$webroot" "$transaction/failed-application" || true
+            fi
+            mv "$backup/application" "$webroot" || true
+        fi
+        mariadb --defaults-extra-file="$client_config" "$db_name" <"$backup/database.sql" || true
+        systemctl start apache2.service || true
+        rolled_back=true
+    fi
+    echo "OrangeHRM update failed; the database was restored from $backup/database.sql" >&2
+    exit "$status"
+}
+trap rollback ERR
+
+if [[ -f $webroot/lib/confs/cryptokeys/key.ohrm ]]; then
+    install -d -m 0750 "$candidate/lib/confs/cryptokeys"
+    cp -a "$webroot/lib/confs/cryptokeys/key.ohrm" "$candidate/lib/confs/cryptokeys/"
+fi
+
+chown -R root:root "$candidate"
+systemctl stop apache2.service
+php "$candidate/installer/console" upgrade:run --no-interaction \
+    --dbHost="$db_host" --dbPort="$db_port" --dbName="$db_name" \
+    --dbUser="$db_user" --dbUserPassword="$db_pass" --currentVersion="$current"
+chown -R www-data:www-data "$candidate/lib/confs" "$candidate/src/cache" "$candidate/src/log"
+cat >"$candidate/installer/.htaccess" <<EOF
+Require all denied
+EOF
+
+mv "$webroot" "$backup/application"
+swapped=true
+mv "$candidate" "$webroot"
+systemctl start apache2.service
+curl --fail --silent --show-error --location \
+    http://127.0.0.1/web/index.php/auth/login >/dev/null
+cat >"/usr/share/orangehrm/release" <<EOF
+version=$target
+url=$asset_url
+sha256=$digest
+EOF
+trap - ERR
+rm -rf -- "$transaction"
+echo "OrangeHRM updated from $current to $target; backup retained at $backup"

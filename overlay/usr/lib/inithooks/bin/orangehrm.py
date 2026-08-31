@@ -45,8 +45,11 @@ def main():
 
     m = MySQL()
     m.execute('UPDATE orangehrm.ohrm_user SET user_password=%s WHERE user_name=\"admin\";', (hash,))
+    m.execute(
+        'UPDATE orangehrm.hs_hr_config SET value=%s WHERE name=%s;',
+        ('off', 'auth.password_policy.enforce_password_strength'),
+    )
 
 
 if __name__ == "__main__":
     main()
-

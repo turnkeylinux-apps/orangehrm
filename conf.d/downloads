@@ -5,7 +5,9 @@ dl() {
     cd $2; curl -L -f -O $PROXY $1; cd -
 }
 
-VERSION="5.5"
-URL="https://download.sourceforge.net/project/orangehrm/stable/${VERSION}/orangehrm-${VERSION}.zip"
+VERSION="5.9"
+SHA256="f6e640f8b59e8d09f15edcd24ac3d42bb52dcc4839a7d83f964dd798bc793f79"
+URL="https://github.com/orangehrm/orangehrm/releases/download/v${VERSION}/orangehrm-${VERSION}.zip"
 
 dl $URL /usr/local/src
+echo "$SHA256  /usr/local/src/orangehrm-${VERSION}.zip" | sha256sum -c -

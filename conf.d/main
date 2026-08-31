@@ -10,15 +10,14 @@ ADMIN_PASS=turnkey12!
 SRC=/usr/local/src
 WEBROOT=/var/www/orangehrm
 
-# unpack and set required permissions
-unzip $SRC/orangehrm-*.zip -d $(dirname $WEBROOT)
-rm $(dirname $WEBROOT)/orangehrm-quick-start-guide.html
-mv $(dirname $WEBROOT)/orangehrm-* $WEBROOT
-rm $SRC/orangehrm-*.zip
+# unpack the verified upstream release
+unzip "$SRC/orangehrm-5.9.zip" -d "$(dirname "$WEBROOT")"
+rm "$(dirname "$WEBROOT")/orangehrm-quick-start-guide.html"
+mv "$(dirname "$WEBROOT")/orangehrm-5.9" "$WEBROOT"
+rm "$SRC/orangehrm-5.9.zip"
 
 
-chown -R root:root $WEBROOT
-chown -R www-data:www-data $WEBROOT/lib/confs
+chown -R root:root "$WEBROOT"
 
 # configure apache
 a2dissite 000-default
@@ -26,7 +25,7 @@ a2ensite orangehrm
 a2enmod rewrite
 
 # start services
-service mysql start
+service mariadb start
 service apache2 start
 
 # setup the database
@@ -36,82 +35,52 @@ MYSQL_ADMIN="mysqladmin --user=root --password=$MYSQL_PASS"
 $MYSQL_ADMIN create $DB_NAME
 $MYSQL_BATCH --execute "grant all privileges on $DB_NAME.* to $DB_USER@localhost identified by '$DB_PASS'; flush privileges;"
 
-CONF=/var/www/orangehrm/installer/cli_install_config.yaml
+CONF=$WEBROOT/installer/cli_install_config.yaml
+cat >"$CONF" <<EOF
+database:
+  hostName: 127.0.0.1
+  hostPort: 3306
+  databaseName: $DB_NAME
+  privilegedDatabaseUser: $DB_USER
+  privilegedDatabasePassword: $DB_PASS
+  useSameDbUserForOrangeHRM: y
+  orangehrmDatabaseUser: ~
+  orangehrmDatabasePassword: ~
+  isExistingDatabase: y
+  enableDataEncryption: n
 
-sed -i "/databaseName/ s/:.*/: $DB_NAME/" $CONF
-sed -i "/privilidgedDatabaseUser/ s/:.*/: $DB_USER/" $CONF
-sed -i "/privilidgedDatabasePassword/ s/:.*/: $DB_PASS/" $CONF
-sed -i "/isExistingDatabase/ s/:.*/: y/" $CONF
+organization:
+  name: TurnKeyLinux
+  country: US
 
-expect << EOF
-spawn php /var/www/orangehrm/installer/console install:on-existing-database
+admin:
+  adminUserName: $ADMIN_NAME
+  adminPassword: $ADMIN_PASS
+  adminEmployeeFirstName: Admin
+  adminEmployeeLastName: istrator
+  workEmail: admin@example.com
+  contactNumber: ~
+  registrationConsent: false
 
-expect "*License Agreement*\r"
-expect " >"
-send "yes\r"
-expect "*Database Host Name*\r"
-expect " >"
-send "localhost\r"
-expect "*Database Host Port*\r"
-expect " >"
-send "3306\r"
-expect "*Database Name*\r"
-expect " >"
-send "orangehrm\r"
-expect "*OrangeHRM Database Username*\r"
-expect " >"
-send "orangehrm\r"
-expect "*OrangeHRM Database User Password*\r"
-expect " >"
-send "$DB_PASS\r"
-expect " >"
-send "\r"
-expect "*Organization Name*\r"
-expect " >"
-send "TurnkeyLinux\r"
-expect "*Country*\r"
-expect " >"
-send "united states\r"
-expect "*Language*\r"
-expect " >"
-send "en_US\r"
-expect "*Timezone Group*\r"
-expect " >"
-send "UTC\r"
-expect " >"
-send "UTC\r"
-expect "*First Name*\r"
-expect " >"
-send "Admin\r"
-expect "*Last Name*\r"
-expect " >"
-send "istrator\r"
-expect "*Email*\r"
-expect " >"
-send "admin@example.com\r"
-expect "*Contact Number*\r"
-expect " >"
-send "\r"
-expect "*Admin Username*\r"
-expect " >"
-send "$ADMIN_NAME\r"
-expect "*Password*\r"
-expect " >"
-send "$ADMIN_PASS\r"
-expect "*Confirm Password*\r"
-expect " >"
-send "$ADMIN_PASS\r"
-expect " >"
-send "no\r"
-expect " >"
-send "yes\r"
-set timeout 480
-expect eof
+license:
+  agree: y
 EOF
+
+php "$WEBROOT/installer/cli_install.php"
+
+chown -R www-data:www-data \
+    "$WEBROOT/lib/confs" "$WEBROOT/src/cache" "$WEBROOT/src/log"
 
 # disable web based installer
 cat >$WEBROOT/installer/.htaccess<<EOF
-deny from all
+Require all denied
+EOF
+
+install -d /usr/share/orangehrm
+cat >/usr/share/orangehrm/release <<EOF
+version=5.9
+url=https://github.com/orangehrm/orangehrm/releases/download/v5.9/orangehrm-5.9.zip
+sha256=f6e640f8b59e8d09f15edcd24ac3d42bb52dcc4839a7d83f964dd798bc793f79
 EOF
 
 # patch database to avoid potential row issue later
@@ -121,6 +90,5 @@ for TABLE in $TABLES; do
 done
 
 # stop services
-service mysql stop
+service mariadb stop
 service apache2 stop
-

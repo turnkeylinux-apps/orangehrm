@@ -13,10 +13,12 @@ and on top of that:
 - OrangeHRM configurations:
    
    - Installed from upstream source code to /var/www/orangehrm
+   - Runs OrangeHRM scheduled tasks every five minutes
 
-   **Security note**: Updates to OrangeHRM may require supervision so
-   they **ARE NOT** configured to install automatically. Upgrades to
-   OrangeHRM should be possible from within the web UI.
+   **Security note**: OrangeHRM updates require supervision and are not
+   installed automatically. Run ``orangehrm-update --check`` to inspect the
+   official release channel, then ``orangehrm-update VERSION`` to install a
+   newer supported release after reviewing the upstream release notes.
 
 - SSL support out of the box.
 - `Adminer`_ administration frontend for MySQL (listening on port
@@ -33,6 +35,6 @@ Credentials *(passwords set at first boot)*
 -  OrangeHRM: username **admin**
 
 
-.. _OrangeHRM: http://www.orangehrm.com
+.. _OrangeHRM: https://www.orangehrm.com
 .. _TurnKey Core: https://www.turnkeylinux.org/core
 .. _Adminer: http://www.adminer.org/
